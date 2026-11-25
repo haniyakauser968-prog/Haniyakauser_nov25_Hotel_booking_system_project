@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StayEase | Hotel Booking</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Stay<span>Ease</span></a>
+    <span class="tagline">Find your perfect stay</span>
+  </header>
+
+  <main class="hero">
+    <section class="intro">
+      <p class="eyebrow">WELCOME TO STAYEASE</p>
+      <h1>Your next stay<br><span>starts here.</span></h1>
+      <p class="intro-copy">Book a comfortable room in just a few steps. Share your details, choose your dates, and we’ll save your reservation.</p>
+      <div class="perks">
+        <div><span class="perk-icon">✓</span> Simple booking</div>
+        <div><span class="perk-icon">✓</span> Instant confirmation</div>
+        <div><span class="perk-icon">✓</span> Secure booking records</div>
+      </div>
+    </section>
+
+    <section class="booking-card">
+      <div class="card-heading">
+        <div>
+          <p class="eyebrow">RESERVATION</p>
+          <h2>Book your room</h2>
+        </div>
+        <span class="step">01 / 01</span>
+      </div>
+
+      <form id="bookingForm">
+        <div class="field">
+          <label for="customer_name">Full name</label>
+          <input id="customer_name" name="customer_name" type="text" placeholder="Enter your full name" required minlength="2">
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <label for="email">Email address</label>
+            <input id="email" name="email" type="email" placeholder="you@example.com" required>
+          </div>
+          <div class="field">
+            <label for="phone">Phone number</label>
+            <input id="phone" name="phone" type="tel" placeholder="Enter phone number" required minlength="7">
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <label for="check_in">Check-in</label>
+            <input id="check_in" name="check_in" type="date" required>
+          </div>
+          <div class="field">
+            <label for="check_out">Check-out</label>
+            <input id="check_out" name="check_out" type="date" required>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <label for="guests">Number of guests</label>
+            <select id="guests" name="guests" required>
+              <option value="1">1 Guest</option>
+              <option value="2" selected>2 Guests</option>
+              <option value="3">3 Guests</option>
+              <option value="4">4 Guests</option>
+              <option value="5">5 Guests</option>
+              <option value="6">6 Guests</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="room_type">Room type</label>
+            <select id="room_type" name="room_type" required>
+              <option value="Standard">Standard Room</option>
+              <option value="Deluxe">Deluxe Room</option>
+              <option value="Suite">Suite</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn">Confirm booking <span>→</span></button>
+        <p class="form-note">Your booking details will be stored in our database.</p>
+      </form>
+
+      <div id="result" class="result" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer>© 2026 StayEase Hotel Booking · Demo application</footer>
+
+  <script>
+    const form = document.getElementById("bookingForm");
+    const checkIn = document.getElementById("check_in");
+    const checkOut = document.getElementById("check_out");
+    const result = document.getElementById("result");
+    const submitBtn = document.getElementById("submitBtn");
+
+    const today = new Date();
+    const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+      .toISOString().split("T")[0];
+    checkIn.min = localToday;
+    checkOut.min = localToday;
+
+    checkIn.addEventListener("change", () => {
+      checkOut.min = checkIn.value || localToday;
+      if (checkOut.value && checkOut.value <= checkIn.value) checkOut.value = "";
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      result.className = "result";
+      result.textContent = "";
+      if (checkOut.value <= checkIn.value) {
+        result.className = "result error";
+        result.textContent = "Check-out date must be after check-in date.";
+        return;
+      }
+
+      const data = Object.fromEntries(new FormData(form).entries());
+      data.guests = Number(data.guests);
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting...";
+
+      try {
+        const response = await fetch("/api/bookings", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(data)
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.detail || "Could not save booking.");
+        result.className = "result success";
+        result.innerHTML = `<strong>Booking confirmed!</strong><br>Your booking ID is <b>#${payload.booking_id}</b>. Your details have been saved.`;
+        form.reset();
+        checkIn.min = localToday;
+        checkOut.min = localToday;
+      } catch (error) {
+        result.className = "result error";
+        result.textContent = error.message;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Confirm booking <span>→</span>';
+      }
+    });
+  </script>
+</body>
+</html>
